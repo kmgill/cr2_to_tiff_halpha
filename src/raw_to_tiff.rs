@@ -1,5 +1,10 @@
+use crate::path;
+
+use std::process;
 use std::fs;
+
 const _14_BIT_MAX : u16 = 16383;
+const _16_BIT_MAX : u16 = std::u16::MAX;
 
 extern crate image;
 
@@ -54,7 +59,7 @@ fn raw_image_to_image_buffer(raw_image:&libraw::RawImage, out_file : &str, mn_mx
                 let idx = y * w + x;
                 let mut val_f32 :f32 = raw_image[idx as usize] as f32;
 
-                val_f32 = (val_f32 - mn_mx.0) / (mn_mx.1 - mn_mx.0) * 65535.0;
+                val_f32 = (val_f32 - mn_mx.0) / (mn_mx.1 - mn_mx.0) * (_16_BIT_MAX as f32);
 
                 let val:u16 = val_f32 as u16;
 
@@ -69,7 +74,12 @@ fn raw_image_to_image_buffer(raw_image:&libraw::RawImage, out_file : &str, mn_mx
     }
 
     println!("    Writing image buffer to file");
-    out_img.save(out_file).unwrap();
+    if path::parent_exists_and_writable(&out_file) {
+        out_img.save(out_file).unwrap();
+    } else {
+        eprintln!("Parent does not exist or cannot be written: {}", path::get_parent(out_file));
+        process::exit(1);
+    }
 }
 
 // Processes an input CR2 raw image file (Canon EOS)
