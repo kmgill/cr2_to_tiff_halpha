@@ -1,6 +1,7 @@
 
 mod path;
 mod raw_to_tiff;
+mod imagebuffer;
 
 use std::env;
 use std::process;
