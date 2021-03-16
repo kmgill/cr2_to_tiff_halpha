@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 libraw-rs = "0.0.4"
 image = "0.23.14"
+clap = "2.33.3"
