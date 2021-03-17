@@ -27,40 +27,33 @@ pub fn process_file(raw_file:&str, flat:&ImageBuffer, dark:&ImageBuffer) {
     let source = ImageBuffer::from_cr2(raw_file).unwrap();
 
     let red = source.red().unwrap();
-    let redmm = red.get_min_max(-1.0).unwrap();
-    println!("    Red Min/Max : {}, {}", redmm.min, redmm.max);
 
     let mut corrected = red;
 
     // Should support one or the other being left out
     if !dark.is_empty() && !flat.is_empty() {
-        let mean_flat = flat.subtract(dark).unwrap().mean();
-        println!("    Flat Mean Value: {}", mean_flat);
-        println!("    Flat Buffer Width: {}", flat.width);
-        println!("    Flat Buffer Height: {}", flat.height);
+        let darkflat = flat.subtract(&dark).unwrap();
+
+        let mean_flat = darkflat.mean();
+        println!("    Dark/Flat Mean Value: {}", mean_flat);
+
+        let red_minus_dark = corrected.subtract(&dark).unwrap();
 
         // Over-simplification:
-        corrected = corrected.subtract(&dark).unwrap().scale(mean_flat).unwrap().divide(&(flat.subtract(&dark).unwrap())).unwrap();
+        corrected = red_minus_dark.scale(mean_flat).unwrap().divide(&flat).unwrap();
     }
-    
-    let mn_mx = corrected.get_min_max(-1.0).unwrap();
-    println!("    Corrected Min/Max (Red only): {}, {}", mn_mx.min, mn_mx.max);
 
     let scaled = corrected.normalize(0.0, 65535.0).unwrap();
     println!("    Scaled Red-Only Buffer Width: {}", scaled.width);
     println!("    Scaled Red-Only Buffer Height: {}", scaled.height);
-    let scaledmm = scaled.get_min_max(-1.0).unwrap();
-    println!("    Normalized Min/Max: {}, {}", scaledmm.min, scaledmm.max);
 
-    
-    let offset = scaled.calc_center_of_mass_offset(3000.0).unwrap();
+
+    let offset = scaled.calc_center_of_mass_offset(20000.0).unwrap();
     println!("    Horizonal center of Mass Offset: {}", offset.h);
     println!("    Vertical Center of Mass Offset: {}", offset.v);
 
     let shifted = scaled.shift(offset.h, offset.v).unwrap();
     let cropped = shifted.crop(1400, 1400).unwrap();
-    let croppedmm = cropped.get_min_max(-1.0).unwrap();
-    println!("    Normalized Min/Max: {}, {}", croppedmm.min, croppedmm.max);
 
     let scaled2 = cropped.normalize(0.0, 65535.0).unwrap();
 

@@ -169,15 +169,20 @@ impl ImageBuffer {
     pub fn mean(&self) -> f32 {
 
         let mut total:f32 = 0.0;
+        let mut count:f32 = 0.0;
 
         // It is *soooo* inefficient to keep doing this...
         for y in 0..self.height {
             for x in 0..self.width {
-                total = total + self.get(x, y).unwrap()
+                let pixel_value = self.get(x, y).unwrap();
+                if pixel_value > 0.0 {
+                    total = total + pixel_value;
+                    count = count + 1.0;
+                }
             }
         }
 
-        return total / (self.width * self.height) as f32;
+        return total / count;
     }
 
     pub fn divide(&self, other:&ImageBuffer) -> Result<ImageBuffer, &str> {
@@ -192,6 +197,19 @@ impl ImageBuffer {
 
         for i in 0..need_len {
             let quotient = if other.buffer[i] != 0.0 { self.buffer[i] / other.buffer[i] } else { 0.0 };
+            v[i] = quotient;
+        }
+
+        ImageBuffer::from_vec(v, self.width, self.height)
+    }
+
+    pub fn divide_into(&self, divisor:f32) -> Result<ImageBuffer, &str> {
+        let need_len = self.width * self.height;
+        let mut v:Vec<f32> = Vec::with_capacity(need_len);
+        v.resize(need_len, 0.0);
+
+        for i in 0..need_len {
+            let quotient = if self.buffer[i] != 0.0 { divisor / self.buffer[i] } else { 0.0 };
             v[i] = quotient;
         }
 
@@ -272,15 +290,17 @@ impl ImageBuffer {
     pub fn shift_to_min_zero(&self) -> Result<ImageBuffer, &str> {
 
         let minmax = self.get_min_max(-1.0).unwrap();
+
         let need_len = self.width * self.height;
         let mut v:Vec<f32> = Vec::with_capacity(need_len);
+        v.resize(need_len, 0.0);
 
         for i in 0..need_len {
             let value = self.buffer[i];
             if minmax.min < 0.0 {
-                v.push(value + minmax.min);
+                v[i] = value + minmax.min;
             } else {
-                v.push(value);
+                v[i] = value - minmax.min;
             }
         }
 
@@ -293,12 +313,13 @@ impl ImageBuffer {
 
         let need_len = self.width * self.height;
         let mut v:Vec<f32> = Vec::with_capacity(need_len);
+        v.resize(need_len, 0.0);
 
         let minmax = shifted.get_min_max(-1.0).unwrap();
         
         for i in 0..need_len {
             let value = ((shifted.buffer[i] - minmax.min) / (minmax.max - minmax.min)) * (max - min) + min;
-            v.push(value);
+            v[i] = value;
         }
 
         Ok(ImageBuffer::from_vec(v, self.width, self.height).unwrap())
@@ -307,21 +328,24 @@ impl ImageBuffer {
     pub fn red(&self) -> Result<ImageBuffer, &str> {
         let dest_height = self.height / 2;
         let dest_width = self.width / 2;
-    
-        let mut dest = ImageBuffer::new(dest_width, dest_height).unwrap();
-    
+
+        let need_len = dest_height * dest_width;
+        let mut v:Vec<f32> = Vec::with_capacity(need_len);
+        v.resize(need_len, 0.0);
+
         for y in (0..self.height).step_by(2) {
             for x in (0..self.width).step_by(2) {
                 let put_x = x / 2;
                 let put_y = y / 2;
-                
+                let put_idx = (put_y * dest_width) + put_x;
+
                 let val_f32 :f32 = self.get(x, y).expect(constants::OK) as f32;
-    
-                dest.put(put_x, put_y, val_f32).expect(constants::OK);
+                
+                v[put_idx] = val_f32;
             }
         }
     
-        Ok(dest)
+        Ok(ImageBuffer::from_vec(v, dest_width, dest_height).unwrap())
     }
 
 
