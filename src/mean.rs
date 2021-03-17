@@ -7,7 +7,7 @@ use std::process;
 
 
 
-pub fn run_mean_stack(file_list:Vec<&str>) {
+pub fn run_mean_stack(file_list:Vec<&str>, output:&str) {
 
     // This feels hacky....
     let mut stack = ImageBuffer::new(1, 1).unwrap();
@@ -18,6 +18,9 @@ pub fn run_mean_stack(file_list:Vec<&str>) {
             println!("Processing File: {}", in_file);
             
             let image = ImageBuffer::from_cr2(&in_file).unwrap().red().unwrap();
+            let imagemm = image.get_min_max(-1.0).unwrap();
+            println!("    Image Min/Max : {}, {}", imagemm.min, imagemm.max);
+
             if cnt == 0 {
                 stack = image;
             } else {
@@ -27,13 +30,15 @@ pub fn run_mean_stack(file_list:Vec<&str>) {
             cnt = cnt + 1;
         } else {
             eprintln!("File not found: {}", in_file);
-            process::exit(1);
         }
     }
 
     if cnt > 0 {
         stack = stack.scale(1.0 / cnt as f32).unwrap();
-        stack.save("/data/Astrophotography/Sun/flat.tif").expect(constants::OK);
+        let stackmm = stack.get_min_max(-1.0).unwrap();
+        println!("    Stack Min/Max : {}, {} ({} images)", stackmm.min, stackmm.max, cnt);
+
+        stack.save(output).expect(constants::OK);
     } else {
         eprintln!("No files used");
         process::exit(1);

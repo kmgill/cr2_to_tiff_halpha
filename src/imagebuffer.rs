@@ -8,8 +8,9 @@ use std::fs;
 // A simple image raster buffer.
 pub struct ImageBuffer {
     buffer: Vec<f32>,
-    pub width: u32,
-    pub height: u32,
+    pub width: usize,
+    pub height: usize,
+    empty: bool,
 }
 
 pub struct Offset {
@@ -25,27 +26,37 @@ pub struct MinMax {
 impl ImageBuffer {
 
     // Creates a new image buffer of the requested width and height
-    pub(crate) fn new(width:u32, height:u32) -> Result<ImageBuffer, &'static str> {
+    pub fn new(width:usize, height:usize) -> Result<ImageBuffer, &'static str> {
 
-        let mut v:Vec<f32> = Vec::with_capacity(width as usize * height as usize);
-        v.resize(width as usize * height as usize, 0.0);
+        let mut v:Vec<f32> = Vec::with_capacity(width * height);
+        v.resize(width * height, 0.0);
 
         Ok(ImageBuffer{buffer:v,
             width:width,
-            height:height
+            height:height,
+            empty:false
+        })
+    }
+
+    pub fn new_empty() -> Result<ImageBuffer, &'static str> {
+        Ok(ImageBuffer{buffer:Vec::new(),
+            width:0,
+            height:0,
+            empty:true
         })
     }
 
     // Creates a new image buffer at the requested width, height and data
-    pub(crate) fn from_vec(v:Vec<f32>, width:u32, height:u32) -> Result<ImageBuffer, &'static str> {
+    pub fn from_vec(v:Vec<f32>, width:usize, height:usize) -> Result<ImageBuffer, &'static str> {
 
-        if v.len() != (width * height) as usize {
+        if v.len() != (width * height) {
             return Err(constants::DIMENSIONS_DO_NOT_MATCH_VECTOR_LENGTH);
         }
 
         Ok(ImageBuffer{buffer:v,
                     width:width,
-                    height:height
+                    height:height,
+                    empty:false
         })
     }
 
@@ -58,16 +69,21 @@ impl ImageBuffer {
         let image_data = open(file_path).unwrap().into_luma16();
         let dims = image_data.dimensions();
 
-        let width = dims.0;
-        let height = dims.1;
+        let width = dims.0 as usize;
+        let height = dims.1 as usize;
         println!("    Input image dimensions: {:?}", image_data.dimensions());
 
-        let mut v:Vec<f32> = Vec::with_capacity((width * height) as usize);
+        
+        let mut v:Vec<f32> = Vec::with_capacity(width * height);
+        v.resize(width * height, 0.0);
+
         for y in 0..height {
             for x in 0..width {
-                let pixel = image_data.get_pixel(x, y);
+                let pixel = image_data.get_pixel(x as u32, y as u32);
                 let value = pixel[0] as f32;
-                v.push(value);
+                let idx = y * width + x;
+                v[idx] = value;
+                //v.push(value);
             }
         }
 
@@ -85,22 +101,26 @@ impl ImageBuffer {
         println!("    Raw pixel buffer top margin: {}", top_margin);
         println!("    Raw pixel buffer left margin: {}", left_margin);
 
-        let need_len = (h - top_margin) * (w - left_margin);
+        let need_len = (h - top_margin) as usize * (w - left_margin) as usize;
         println!("    Creating vector of capacity {}", need_len);
 
-        let mut v:Vec<f32> = Vec::with_capacity(need_len as usize);
+        let mut v:Vec<f32> = Vec::with_capacity(need_len);
+        v.resize(need_len, 0.0);
 
         for y in 0..h {
             for x in 0..w {
                 if y >= top_margin && x >= left_margin {
                     let idx = y * w + x;
                     let val = raw_image[idx as usize] as f32;
-                    v.push(val);
+                    
+                    let put_idx = ((y - top_margin) * (w - left_margin) + (x - left_margin)) as usize;
+                    v[put_idx] = val;
+                    //v.push(val);
                 }
             }
         }
 
-        ImageBuffer::from_vec(v, w-left_margin, h-top_margin)
+        ImageBuffer::from_vec(v, (w-left_margin) as usize, (h-top_margin) as usize)
     }  
 
     pub fn from_cr2(raw_file:&str) -> Result<ImageBuffer, &str> {
@@ -118,23 +138,27 @@ impl ImageBuffer {
         Ok(ImageBuffer::from_libraw(&raw_image).unwrap())
     }
 
-    pub fn get(&self, x:u32, y:u32) -> Result<f32, &str> {
+    pub fn get(&self, x:usize, y:usize) -> Result<f32, &str> {
         if x < self.width && y < self.height {
             let index = y * self.width + x;
-            return Ok(self.buffer[index as usize]);
+            return Ok(self.buffer[index]);
         } else {
             return Err(constants::INVALID_PIXEL_COORDINATES); // TODO: learn to throw exceptions
         }
     }
 
-    pub fn put_u16(&mut self, x:u32, y:u32, val:u16) -> Result<&str, &str> {
+    pub fn is_empty(&self) -> bool {
+        self.empty
+    }
+
+    pub fn put_u16(&mut self, x:usize, y:usize, val:u16) -> Result<&str, &str> {
         self.put(x, y, val as f32)
     }
 
-    pub fn put(&mut self, x:u32, y:u32, val:f32) -> Result<&str, &str>{
+    pub fn put(&mut self, x:usize, y:usize, val:f32) -> Result<&str, &str>{
         if x < self.width && y < self.height {
             let index = y * self.width + x;
-            self.buffer[index as usize] = val;
+            self.buffer[index] = val;
             return Ok(constants::OK);
         } else {
             return Err(constants::INVALID_PIXEL_COORDINATES);
@@ -163,11 +187,12 @@ impl ImageBuffer {
         }
 
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len as usize);
-        
+        let mut v:Vec<f32> = Vec::with_capacity(need_len);
+        v.resize(need_len, 0.0);
+
         for i in 0..need_len {
-            let quotient = self.buffer[i as usize] / other.buffer[i as usize];
-            v.push(quotient);
+            let quotient = if other.buffer[i] != 0.0 { self.buffer[i] / other.buffer[i] } else { 0.0 };
+            v[i] = quotient;
         }
 
         ImageBuffer::from_vec(v, self.width, self.height)
@@ -175,11 +200,12 @@ impl ImageBuffer {
 
     pub fn scale(&self, scalar:f32) -> Result<ImageBuffer, &str> {
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len as usize);
+        let mut v:Vec<f32> = Vec::with_capacity(need_len);
+        v.resize(need_len, 0.0);
 
         for i in 0..need_len {
-            let product = self.buffer[i as usize] * scalar;
-            v.push(product);
+            let product = self.buffer[i] * scalar;
+            v[i] = product;
         }
 
         ImageBuffer::from_vec(v, self.width, self.height)
@@ -192,11 +218,12 @@ impl ImageBuffer {
         }
 
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len as usize);
-        
+        let mut v:Vec<f32> = Vec::with_capacity(need_len);
+        v.resize(need_len, 0.0);
+
         for i in 0..need_len {
-            let product = self.buffer[i as usize] * other.buffer[i as usize];
-            v.push(product);
+            let product = self.buffer[i] * other.buffer[i];
+            v[i] = product;
         }
 
         ImageBuffer::from_vec(v, self.width, self.height)
@@ -209,11 +236,12 @@ impl ImageBuffer {
         }
 
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len as usize);
-        
+        let mut v:Vec<f32> = Vec::with_capacity(need_len);
+        v.resize(need_len, 0.0);
+
         for i in 0..need_len {
-            let result = self.buffer[i as usize] + other.buffer[i as usize];
-            v.push(result);
+            let result = self.buffer[i] + other.buffer[i];
+            v[i] = result;
         }
 
         ImageBuffer::from_vec(v, self.width, self.height)
@@ -226,14 +254,54 @@ impl ImageBuffer {
         }
 
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len as usize);
-        
+        let mut v:Vec<f32> = Vec::with_capacity(need_len);
+        v.resize(need_len, 0.0);
+
         for i in 0..need_len {
-            let difference = self.buffer[i as usize] - other.buffer[i as usize];
-            v.push(difference);
+            let mut difference = self.buffer[i] - other.buffer[i];
+            if difference < 0.0 {
+                difference = 0.0;
+            }
+            v[i] = difference;
         }
 
         ImageBuffer::from_vec(v, self.width, self.height)
+    }
+
+
+    pub fn shift_to_min_zero(&self) -> Result<ImageBuffer, &str> {
+
+        let minmax = self.get_min_max(-1.0).unwrap();
+        let need_len = self.width * self.height;
+        let mut v:Vec<f32> = Vec::with_capacity(need_len);
+
+        for i in 0..need_len {
+            let value = self.buffer[i];
+            if minmax.min < 0.0 {
+                v.push(value + minmax.min);
+            } else {
+                v.push(value);
+            }
+        }
+
+        Ok(ImageBuffer::from_vec(v, self.width, self.height).unwrap())
+    }
+
+    pub fn normalize(&self, min:f32, max:f32) -> Result<ImageBuffer, &str> {
+
+        let shifted = self.shift_to_min_zero().unwrap();
+
+        let need_len = self.width * self.height;
+        let mut v:Vec<f32> = Vec::with_capacity(need_len);
+
+        let minmax = shifted.get_min_max(-1.0).unwrap();
+        
+        for i in 0..need_len {
+            let value = ((shifted.buffer[i] - minmax.min) / (minmax.max - minmax.min)) * (max - min) + min;
+            v.push(value);
+        }
+
+        Ok(ImageBuffer::from_vec(v, self.width, self.height).unwrap())
     }
 
     pub fn red(&self) -> Result<ImageBuffer, &str> {
@@ -257,7 +325,7 @@ impl ImageBuffer {
     }
 
 
-    pub fn crop(&self, height:u32, width:u32) -> Result<ImageBuffer, &str> {
+    pub fn crop(&self, height:usize, width:usize) -> Result<ImageBuffer, &str> {
 
         let mut cropped_buffer = ImageBuffer::new(width, height).unwrap();
 
@@ -278,13 +346,16 @@ impl ImageBuffer {
 
         let mut shifted_buffer = ImageBuffer::new(self.width, self.height).unwrap();
 
-        for y in 0..self.height {
-            for x in 0..self.width {
+        let h = self.height as i32;
+        let w = self.width as i32;
+
+        for y in 0..h {
+            for x in 0..w {
                 let shift_x = x as i32 + horiz;
                 let shift_y = y as i32 + vert;
             
-                if shift_x >= 0 && shift_y >= 0 && shift_x < self.width as i32 && shift_y < self.height as i32 {
-                    shifted_buffer.put(shift_x as u32, shift_y as u32, self.get(x, y).unwrap()).unwrap();
+                if shift_x >= 0 && shift_y >= 0 && shift_x < w  && shift_y < h {
+                    shifted_buffer.put(shift_x as usize, shift_y as usize, self.get(x as usize, y as usize).unwrap()).unwrap();
                 }
             }
         }
@@ -319,8 +390,8 @@ impl ImageBuffer {
     // red pixel channel.
     pub fn get_min_max(&self, override_dark:f32) -> Result<MinMax, &str> {
         
-        let mut mx:f32 = 0.0;
-        let mut mn:f32 = constants::_14_BIT_MAX as f32;
+        let mut mx:f32 = std::f32::MIN;
+        let mut mn:f32 = std::f32::MAX;
 
         for y in 0..self.height {
             for x in 0..self.width {
@@ -337,18 +408,19 @@ impl ImageBuffer {
     }
 
     pub fn save(&self, to_file:&str) -> Result<&str, &str> {
-        let mut out_img = DynamicImage::new_rgb16(self.width, self.height).into_rgb16();
+        let mut out_img = DynamicImage::new_rgb16(self.width as u32, self.height as u32).into_rgb16();
         
         for y in 0..self.height {
             for x in 0..self.width {
                 let val = self.get(x, y).unwrap().round() as u16;
-                out_img.put_pixel(x, y, Rgb([val, val, val]));
+                out_img.put_pixel(x as u32, y as u32, Rgb([val, val, val]));
             }
         }
 
-        println!("    Writing image buffer to file");
+        println!("    Writing image buffer to file at {}", to_file);
         if path::parent_exists_and_writable(&to_file) {
             out_img.save(to_file).unwrap();
+            println!("    File saved.");
             return Ok(constants::OK);
         } else {
             eprintln!("Parent does not exist or cannot be written: {}", path::get_parent(to_file));
