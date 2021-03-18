@@ -28,7 +28,10 @@ OPTIONS:
 Examples currently reflect execution from the development environment. I haven't made it any futher than that...
 
 ### Create Master Dark/Flats:
-`$ cargo run -- -o mean -i /data/Astrophotography/Sun/2021-03-16/dark/*CR2 -O /data/Astrophotography/Sun/2021-03-16/dark-v1.tif `
+`$ cargo run --bin mkmean -- -i /data/Astrophotography/Sun/2021-03-16/dark/*CR2 -O /data/Astrophotography/Sun/2021-03-16/dark-v1.tif `
 
 ### Run using master dark & flat:
-`cargo run -- -o convert -i /data/Astrophotography/Sun/2021-03-16/light/IMG_*.CR2 -f /data/Astrophotography/Sun/2021-03-16/flat-v1.tif -d /data/Astrophotography/Sun/2021-03-16/dark-v1.tif`
+`cargo run --bin cr2totiff -- -i /data/Astrophotography/Sun/2021-03-16/light/IMG_*.CR2 -f /data/Astrophotography/Sun/2021-03-16/flat-v1.tif -d /data/Astrophotography/Sun/2021-03-16/dark-v1.tif`
+
+### End-to-End Processing:
+`cargo run --bin proc_ha -- -i /data/Astrophotography/Sun/2021-03-16/light/IMG_*.CR2 -f /data/Astrophotography/Sun/2021-03-16/flat/*CR2  -d /data/Astrophotography/Sun/2021-03-16/dark/*CR2 -O /data/Astrophotography/Sun/2021-03-16/test-stack-v1.tif`

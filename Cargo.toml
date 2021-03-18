@@ -17,6 +17,10 @@ path = "bin/cr2totiff.rs"
 name = "mkmean"
 path = "bin/mkmean.rs"
 
+[[bin]]
+name = "proc_ha"
+path = "bin/proc_ha.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

@@ -1,6 +1,8 @@
 
 use crate::path;
 use crate::constants;
+use crate::vprintln;
+
 extern crate image;
 use image::{open, DynamicImage, Rgb};
 use std::fs;
@@ -72,7 +74,7 @@ impl ImageBuffer {
 
         let width = dims.0 as usize;
         let height = dims.1 as usize;
-        println!("    Input image dimensions: {:?}", image_data.dimensions());
+        vprintln!("    Input image dimensions: {:?}", image_data.dimensions());
 
         
         let mut v:Vec<f32> = Vec::with_capacity(width * height);
@@ -97,13 +99,13 @@ impl ImageBuffer {
         let h:u32 = raw_image.sizes().raw_height as u32;
         let w:u32 = raw_image.sizes().raw_width as u32;
 
-        println!("    Raw pixel buffer height: {}", h);
-        println!("    Raw pixel buffer width: {}", w);
-        println!("    Raw pixel buffer top margin: {}", top_margin);
-        println!("    Raw pixel buffer left margin: {}", left_margin);
+        vprintln!("    Raw pixel buffer height: {}", h);
+        vprintln!("    Raw pixel buffer width: {}", w);
+        vprintln!("    Raw pixel buffer top margin: {}", top_margin);
+        vprintln!("    Raw pixel buffer left margin: {}", left_margin);
 
         let need_len = (h - top_margin) as usize * (w - left_margin) as usize;
-        println!("    Creating vector of capacity {}", need_len);
+        vprintln!("    Creating vector of capacity {}", need_len);
 
         let mut v:Vec<f32> = Vec::with_capacity(need_len);
         v.resize(need_len, 0.0);
@@ -125,14 +127,14 @@ impl ImageBuffer {
     }  
 
     pub fn from_cr2(raw_file:&str) -> Result<ImageBuffer, &str> {
-        println!("    Reading raw image file {}", raw_file);
+        vprintln!("    Reading raw image file {}", raw_file);
 
         if !path::file_exists(raw_file) {
             return Err("File does not exist");
         }
         let buf = fs::read(raw_file).expect("read in");
     
-        println!("    Decoding for raw pixel values");
+        vprintln!("    Decoding for raw pixel values");
         let processor = libraw::Processor::new();
         let raw_image = processor.decode(&buf).unwrap();
     
@@ -442,10 +444,10 @@ impl ImageBuffer {
             }
         }
 
-        println!("    Writing image buffer to file at {}", to_file);
+        vprintln!("    Writing image buffer to file at {}", to_file);
         if path::parent_exists_and_writable(&to_file) {
             out_img.save(to_file).unwrap();
-            println!("    File saved.");
+            vprintln!("    File saved.");
             return Ok(constants::OK);
         } else {
             eprintln!("Parent does not exist or cannot be written: {}", path::get_parent(to_file));
