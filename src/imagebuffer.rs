@@ -23,6 +23,7 @@ pub struct MinMax {
     pub max: f32,
 }
 
+#[allow(dead_code)]
 impl ImageBuffer {
 
     // Creates a new image buffer of the requested width and height

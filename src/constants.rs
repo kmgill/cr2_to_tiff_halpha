@@ -26,6 +26,7 @@ pub const OP_CONVERT : &str = "convert";
 pub const OP_CALC_MEAN : &str = "mean";
 
 // Parameters
+pub const PARAM_VERBOSE : &str = "v";
 pub const PARAM_OPERATION : &str = "operation";
 pub const PARAM_OPERATION_SHORT : &str = "o";
 pub const PARAM_OUTPUT : &str = "output";

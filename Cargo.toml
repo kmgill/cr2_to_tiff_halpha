@@ -4,6 +4,19 @@ version = "0.1.0"
 authors = ["Kevin M. Gill <apoapsys@gmail.com>"]
 edition = "2018"
 
+[lib]
+name = "cr2_to_tiff_halpha"
+doctest = false
+
+[[bin]]
+name = "cr2totiff"
+path = "bin/cr2totiff.rs"
+
+
+[[bin]]
+name = "mkmean"
+path = "bin/mkmean.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

@@ -4,18 +4,19 @@ mod raw_to_tiff;
 mod imagebuffer;
 mod constants;
 mod mean;
+mod print;
 
 #[macro_use]
 extern crate clap;
 
 use clap::{Arg, App};
 
-
 fn main() {
 
     let matches = App::new(crate_name!())
                     .version(crate_version!())
                     .author(crate_authors!())
+
                     .arg(Arg::with_name(constants::PARAM_OPERATION)
                         .short(constants::PARAM_OPERATION_SHORT)
                         .long(constants::PARAM_OPERATION)
@@ -52,17 +53,23 @@ fn main() {
                         .help("Input raws")
                         .required(true)
                         .multiple(true)
-                        .takes_value(true)
-                        )
+                        .takes_value(true))
+                    .arg(Arg::with_name(constants::PARAM_VERBOSE)
+                        .short(constants::PARAM_VERBOSE)
+                        .help("Show verbose output"))
                     .get_matches();
 
 
     let vals: Vec<&str> = matches.values_of(constants::PARAM_INPUTS).unwrap().collect();
 
+    if matches.is_present(constants::PARAM_VERBOSE) {
+        print::set_verbose(true);
+    }
+
     if matches.value_of(constants::PARAM_OPERATION) == Some(constants::OP_CONVERT) {
 
-        let dark = if (matches.value_of(constants::PARAM_DARK) == None) { constants::EMPTY } else { matches.value_of(constants::PARAM_DARK).unwrap() };
-        let flat = if (matches.value_of(constants::PARAM_FLAT) == None) { constants::EMPTY } else { matches.value_of(constants::PARAM_FLAT).unwrap() };
+        let dark = if matches.value_of(constants::PARAM_DARK) == None { constants::EMPTY } else { matches.value_of(constants::PARAM_DARK).unwrap() };
+        let flat = if matches.value_of(constants::PARAM_FLAT) == None { constants::EMPTY } else { matches.value_of(constants::PARAM_FLAT).unwrap() };
         raw_to_tiff::run_convert(vals, dark, flat);
 
     } else if matches.value_of(constants::PARAM_OPERATION) == Some(constants::OP_CALC_MEAN) {
@@ -75,5 +82,4 @@ fn main() {
         }
         
     }
-
 }

@@ -1,13 +1,12 @@
 
 
-use crate::imagebuffer::{MinMax, ImageBuffer};
+use crate::imagebuffer::ImageBuffer;
 use crate::path;
 use crate::constants;
 
-use std::process;
-
 extern crate image;
 
+/*
 fn linear_to_srgb(lin:f32) -> f32 {
     let mut v:f32 = lin;
     v = v / constants::_16_BIT_MAX as f32;
@@ -19,10 +18,10 @@ fn linear_to_srgb(lin:f32) -> f32 {
     v = v * constants::_16_BIT_MAX as f32;
     return v
 }
-
+*/
 
 // Processes an input CR2 raw image file (Canon EOS)
-pub fn process_file(raw_file:&str, flat:&ImageBuffer, dark:&ImageBuffer) {
+fn process_file(raw_file:&str, flat:&ImageBuffer, dark:&ImageBuffer) {
 
     let source = ImageBuffer::from_cr2(raw_file).unwrap();
 
@@ -43,7 +42,7 @@ pub fn process_file(raw_file:&str, flat:&ImageBuffer, dark:&ImageBuffer) {
         corrected = red_minus_dark.scale(mean_flat).unwrap().divide(&flat).unwrap();
     }
 
-    let scaled = corrected.normalize(0.0, 65535.0).unwrap();
+    let scaled = corrected.normalize(0.0, constants::_16_BIT_MAX).unwrap();
     println!("    Scaled Red-Only Buffer Width: {}", scaled.width);
     println!("    Scaled Red-Only Buffer Height: {}", scaled.height);
 
@@ -55,7 +54,7 @@ pub fn process_file(raw_file:&str, flat:&ImageBuffer, dark:&ImageBuffer) {
     let shifted = scaled.shift(offset.h, offset.v).unwrap();
     let cropped = shifted.crop(1400, 1400).unwrap();
 
-    let scaled2 = cropped.normalize(0.0, 65535.0).unwrap();
+    let scaled2 = cropped.normalize(0.0, constants::_16_BIT_MAX).unwrap();
 
     let out_file = raw_file.replace("CR2", "tif").replace("cr2", "tif");
     println!("    Determined output file path to be {}", out_file);
