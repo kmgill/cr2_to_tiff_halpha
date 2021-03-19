@@ -27,10 +27,8 @@ pub const OP_CALC_MEAN : &str = "mean";
 
 // Parameters
 pub const PARAM_VERBOSE : &str = "v";
-pub const PARAM_OPERATION : &str = "operation";
-pub const PARAM_OPERATION_SHORT : &str = "o";
 pub const PARAM_OUTPUT : &str = "output";
-pub const PARAM_OUTPUT_SHORT : &str = "O";
+pub const PARAM_OUTPUT_SHORT : &str = "o";
 pub const PARAM_DARK : &str = "dark";
 pub const PARAM_DARK_SHORT : &str = "d";
 pub const PARAM_FLAT : &str = "flat";

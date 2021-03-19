@@ -4,9 +4,6 @@ use crate::path;
 use crate::constants;
 use crate::vprintln;
 
-use std::process;
-
-
 pub fn process_mean(file_list:Vec<&str>) -> Result<ImageBuffer, &'static str> {
     // This feels hacky....
     let mut stack = ImageBuffer::new(1, 1).unwrap();
