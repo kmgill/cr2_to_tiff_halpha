@@ -14,36 +14,36 @@ fn main() {
     let matches = App::new(crate_name!())
                     .version(crate_version!())
                     .author(crate_authors!())
-                    .arg(Arg::with_name(constants::PARAM_DARK)
-                        .short(constants::PARAM_DARK_SHORT)
-                        .long(constants::PARAM_DARK)
+                    .arg(Arg::with_name(constants::param::PARAM_DARK)
+                        .short(constants::param::PARAM_DARK_SHORT)
+                        .long(constants::param::PARAM_DARK)
                         .value_name("DARK")
                         .help("Master dark file(s)")
                         .required(false)
                         .multiple(true)
                         .takes_value(true))
-                    .arg(Arg::with_name(constants::PARAM_FLAT)
-                        .short(constants::PARAM_FLAT_SHORT)
-                        .long(constants::PARAM_FLAT)
+                    .arg(Arg::with_name(constants::param::PARAM_FLAT)
+                        .short(constants::param::PARAM_FLAT_SHORT)
+                        .long(constants::param::PARAM_FLAT)
                         .value_name("FLAT")
                         .help("Master flat file(s)")
                         .required(false)
                         .multiple(true)
                         .takes_value(true))
-                    .arg(Arg::with_name(constants::PARAM_INPUTS)
-                        .short(constants::PARAM_INPUTS_SHORT)
-                        .long(constants::PARAM_INPUTS)
+                    .arg(Arg::with_name(constants::param::PARAM_INPUTS)
+                        .short(constants::param::PARAM_INPUTS_SHORT)
+                        .long(constants::param::PARAM_INPUTS)
                         .value_name("INPUTS")
                         .help("Input raws")
                         .required(true)
                         .multiple(true)
                         .takes_value(true))
-                    .arg(Arg::with_name(constants::PARAM_VERBOSE)
-                        .short(constants::PARAM_VERBOSE)
+                    .arg(Arg::with_name(constants::param::PARAM_VERBOSE)
+                        .short(constants::param::PARAM_VERBOSE)
                         .help("Show verbose output"))
-                    .arg(Arg::with_name(constants::PARAM_OUTPUT)
-                        .short(constants::PARAM_OUTPUT_SHORT)
-                        .long(constants::PARAM_OUTPUT)
+                    .arg(Arg::with_name(constants::param::PARAM_OUTPUT)
+                        .short(constants::param::PARAM_OUTPUT_SHORT)
+                        .long(constants::param::PARAM_OUTPUT)
                         .value_name("OUTPUT")
                         .help("Output")
                         .required(true)
@@ -51,11 +51,11 @@ fn main() {
                     .get_matches();
 
 
-    let lights: Vec<&str> = matches.values_of(constants::PARAM_INPUTS).unwrap().collect();
-    let darks: Vec<&str> = matches.values_of(constants::PARAM_DARK).unwrap().collect();
-    let flats: Vec<&str> = matches.values_of(constants::PARAM_FLAT).unwrap().collect();
+    let lights: Vec<&str> = matches.values_of(constants::param::PARAM_INPUTS).unwrap().collect();
+    let darks: Vec<&str> = matches.values_of(constants::param::PARAM_DARK).unwrap().collect();
+    let flats: Vec<&str> = matches.values_of(constants::param::PARAM_FLAT).unwrap().collect();
 
-    if matches.is_present(constants::PARAM_VERBOSE) {
+    if matches.is_present(constants::param::PARAM_VERBOSE) {
         print::set_verbose(true);
     }
 
@@ -85,12 +85,12 @@ fn main() {
         }
     }
 
-    let output = matches.value_of(constants::PARAM_OUTPUT).unwrap();
+    let output = matches.value_of(constants::param::PARAM_OUTPUT).unwrap();
     if cnt > 0 {
         stack = stack.scale(1.0 / cnt as f32).unwrap();
         let stackmm = stack.get_min_max(-1.0).unwrap();
         vprintln!("    Stack Min/Max : {}, {} ({} images)", stackmm.min, stackmm.max, cnt);
-        stack.save(output).expect(constants::OK);
+        stack.save(output).expect(constants::status::OK);
     } else {
         eprintln!("No files used");
     }

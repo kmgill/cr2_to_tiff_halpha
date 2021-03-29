@@ -66,7 +66,7 @@ fn process_file(raw_file:&str, flat:&ImageBuffer, dark:&ImageBuffer) {
 
     let out_file = raw_file.replace("CR2", "tif").replace("cr2", "tif");
     vprintln!("    Determined output file path to be {}", out_file);
-    calibrated.save(&out_file).expect(constants::OK);
+    calibrated.save(&out_file).expect(constants::status::OK);
 }
 
 pub fn run_convert(file_list:Vec<&str>, dark_file:&str, flat_file:&str) {

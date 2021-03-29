@@ -8,6 +8,7 @@ use image::{open, DynamicImage, Rgb};
 use std::fs;
 
 // A simple image raster buffer.
+#[derive(Debug, Clone)]
 pub struct ImageBuffer {
     buffer: Vec<f32>,
     pub width: usize,
@@ -53,7 +54,7 @@ impl ImageBuffer {
     pub fn from_vec(v:Vec<f32>, width:usize, height:usize) -> Result<ImageBuffer, &'static str> {
 
         if v.len() != (width * height) {
-            return Err(constants::DIMENSIONS_DO_NOT_MATCH_VECTOR_LENGTH);
+            return Err(constants::status::DIMENSIONS_DO_NOT_MATCH_VECTOR_LENGTH);
         }
 
         Ok(ImageBuffer{buffer:v,
@@ -66,7 +67,7 @@ impl ImageBuffer {
     pub fn from_file(file_path:&str) -> Result<ImageBuffer, &'static str> {
 
         if !path::file_exists(file_path) {
-            return Err(constants::FILE_NOT_FOUND);
+            return Err(constants::status::FILE_NOT_FOUND);
         }
 
         let image_data = open(file_path).unwrap().into_luma16();
@@ -86,7 +87,6 @@ impl ImageBuffer {
                 let value = pixel[0] as f32;
                 let idx = y * width + x;
                 v[idx] = value;
-                //v.push(value);
             }
         }
 
@@ -118,7 +118,6 @@ impl ImageBuffer {
                     
                     let put_idx = ((y - top_margin) * (w - left_margin) + (x - left_margin)) as usize;
                     v[put_idx] = val;
-                    //v.push(val);
                 }
             }
         }
@@ -146,7 +145,7 @@ impl ImageBuffer {
             let index = y * self.width + x;
             return Ok(self.buffer[index]);
         } else {
-            return Err(constants::INVALID_PIXEL_COORDINATES); // TODO: learn to throw exceptions
+            return Err(constants::status::INVALID_PIXEL_COORDINATES); // TODO: learn to throw exceptions
         }
     }
 
@@ -162,10 +161,24 @@ impl ImageBuffer {
         if x < self.width && y < self.height {
             let index = y * self.width + x;
             self.buffer[index] = val;
-            return Ok(constants::OK);
+            return Ok(constants::status::OK);
         } else {
-            return Err(constants::INVALID_PIXEL_COORDINATES);
+            return Err(constants::status::INVALID_PIXEL_COORDINATES);
         }
+    }
+
+    fn put_to_index_u16(&mut self, index:usize, val:u16) -> Result<&str, &str> {
+        self.put_to_index(index, val as f32)
+    }
+
+    fn put_to_index(&mut self, index:usize, val:f32) -> Result<&str, &str> {
+        if index >= (self.width * self.height) {
+            return Err(constants::status::INVALID_PIXEL_COORDINATES);
+        }
+
+        self.buffer[index] = val;
+
+        Ok(constants::status::OK)
     }
 
     // Computes the mean of all pixel values
@@ -191,102 +204,100 @@ impl ImageBuffer {
     pub fn divide(&self, other:&ImageBuffer) -> Result<ImageBuffer, &str> {
 
         if self.width != other.width || self.height != other.height {
-            return Err(constants::ARRAY_SIZE_MISMATCH);
+            return Err(constants::status::ARRAY_SIZE_MISMATCH);
         }
 
+        let mut dest = ImageBuffer::new(self.width, self.height).unwrap();
+
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len);
-        v.resize(need_len, 0.0);
 
         for i in 0..need_len {
             let quotient = if other.buffer[i] != 0.0 { self.buffer[i] / other.buffer[i] } else { 0.0 };
-            v[i] = quotient;
+            dest.put_to_index(i, quotient).unwrap();
         }
 
-        ImageBuffer::from_vec(v, self.width, self.height)
+        Ok(dest)
     }
 
     pub fn divide_into(&self, divisor:f32) -> Result<ImageBuffer, &str> {
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len);
-        v.resize(need_len, 0.0);
+        let mut dest = ImageBuffer::new(self.width, self.height).unwrap();
 
         for i in 0..need_len {
             let quotient = if self.buffer[i] != 0.0 { divisor / self.buffer[i] } else { 0.0 };
-            v[i] = quotient;
+            dest.put_to_index(i, quotient).unwrap();
         }
 
-        ImageBuffer::from_vec(v, self.width, self.height)
+        Ok(dest)
     }
 
     pub fn scale(&self, scalar:f32) -> Result<ImageBuffer, &str> {
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len);
-        v.resize(need_len, 0.0);
+        let mut dest = ImageBuffer::new(self.width, self.height).unwrap();
 
         for i in 0..need_len {
             let product = self.buffer[i] * scalar;
-            v[i] = product;
+            dest.put_to_index(i, product).unwrap();
+            //v[i] = product;
         }
 
-        ImageBuffer::from_vec(v, self.width, self.height)
+        Ok(dest)
     }
 
     pub fn multiply(&self, other:&ImageBuffer) -> Result<ImageBuffer, &str> {
 
         if self.width != other.width || self.height != other.height {
-            return Err(constants::ARRAY_SIZE_MISMATCH);
+            return Err(constants::status::ARRAY_SIZE_MISMATCH);
         }
 
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len);
-        v.resize(need_len, 0.0);
+        let mut dest = ImageBuffer::new(self.width, self.height).unwrap();
 
         for i in 0..need_len {
             let product = self.buffer[i] * other.buffer[i];
-            v[i] = product;
+            dest.put_to_index(i, product).unwrap();
+            //v[i] = product;
         }
 
-        ImageBuffer::from_vec(v, self.width, self.height)
+        Ok(dest)
     }
 
     pub fn add(&self, other:&ImageBuffer) -> Result<ImageBuffer, &str> {
 
         if self.width != other.width || self.height != other.height {
-            return Err(constants::ARRAY_SIZE_MISMATCH);
+            return Err(constants::status::ARRAY_SIZE_MISMATCH);
         }
 
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len);
-        v.resize(need_len, 0.0);
+        let mut dest = ImageBuffer::new(self.width, self.height).unwrap();
 
         for i in 0..need_len {
             let result = self.buffer[i] + other.buffer[i];
-            v[i] = result;
+            dest.put_to_index(i, result).unwrap();
+            //v[i] = result;
         }
 
-        ImageBuffer::from_vec(v, self.width, self.height)
+        Ok(dest)
     }
 
     pub fn subtract(&self, other:&ImageBuffer) -> Result<ImageBuffer, &str> {
 
         if self.width != other.width || self.height != other.height {
-            return Err(constants::ARRAY_SIZE_MISMATCH);
+            return Err(constants::status::ARRAY_SIZE_MISMATCH);
         }
 
+        let mut dest = ImageBuffer::new(self.width, self.height).unwrap();
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len);
-        v.resize(need_len, 0.0);
 
         for i in 0..need_len {
             let mut difference = self.buffer[i] - other.buffer[i];
             if difference < 0.0 {
                 difference = 0.0;
             }
-            v[i] = difference;
+            dest.put_to_index(i, difference).unwrap();
         }
 
-        ImageBuffer::from_vec(v, self.width, self.height)
+        Ok(dest)
     }
 
 
@@ -295,19 +306,18 @@ impl ImageBuffer {
         let minmax = self.get_min_max(-1.0).unwrap();
 
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len);
-        v.resize(need_len, 0.0);
+        let mut dest = ImageBuffer::new(self.width, self.height).unwrap();
 
         for i in 0..need_len {
             let value = self.buffer[i];
             if minmax.min < 0.0 {
-                v[i] = value + minmax.min;
+                dest.put_to_index(i, value + minmax.min).unwrap();
             } else {
-                v[i] = value - minmax.min;
+                dest.put_to_index(i, value - minmax.min).unwrap();
             }
         }
 
-        Ok(ImageBuffer::from_vec(v, self.width, self.height).unwrap())
+        Ok(dest)
     }
 
     pub fn normalize(&self, min:f32, max:f32) -> Result<ImageBuffer, &str> {
@@ -315,26 +325,22 @@ impl ImageBuffer {
         let shifted = self.shift_to_min_zero().unwrap();
 
         let need_len = self.width * self.height;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len);
-        v.resize(need_len, 0.0);
+        let mut dest = ImageBuffer::new(self.width, self.height).unwrap();
 
         let minmax = shifted.get_min_max(-1.0).unwrap();
         
         for i in 0..need_len {
             let value = ((shifted.buffer[i] - minmax.min) / (minmax.max - minmax.min)) * (max - min) + min;
-            v[i] = value;
+            dest.put_to_index(i, value).unwrap();
         }
-
-        Ok(ImageBuffer::from_vec(v, self.width, self.height).unwrap())
+        Ok(dest)
     }
 
     pub fn red(&self) -> Result<ImageBuffer, &str> {
         let dest_height = self.height / 2;
         let dest_width = self.width / 2;
 
-        let need_len = dest_height * dest_width;
-        let mut v:Vec<f32> = Vec::with_capacity(need_len);
-        v.resize(need_len, 0.0);
+        let mut dest = ImageBuffer::new(dest_width, dest_height).unwrap();
 
         for y in (0..self.height).step_by(2) {
             for x in (0..self.width).step_by(2) {
@@ -342,13 +348,11 @@ impl ImageBuffer {
                 let put_y = y / 2;
                 let put_idx = (put_y * dest_width) + put_x;
 
-                let val_f32 :f32 = self.get(x, y).expect(constants::OK) as f32;
-                
-                v[put_idx] = val_f32;
+                let val_f32 :f32 = self.get(x, y).expect(constants::status::OK) as f32;
+                dest.put_to_index(put_idx, val_f32).unwrap();
             }
         }
-    
-        Ok(ImageBuffer::from_vec(v, dest_width, dest_height).unwrap())
+        Ok(dest)
     }
 
 
@@ -448,12 +452,11 @@ impl ImageBuffer {
         if path::parent_exists_and_writable(&to_file) {
             out_img.save(to_file).unwrap();
             vprintln!("    File saved.");
-            return Ok(constants::OK);
+            return Ok(constants::status::OK);
         } else {
             eprintln!("Parent does not exist or cannot be written: {}", path::get_parent(to_file));
-            return Err(constants::PARENT_NOT_EXISTS_OR_UNWRITABLE);
+            return Err(constants::status::PARENT_NOT_EXISTS_OR_UNWRITABLE);
         }
-    
     }
 }
 

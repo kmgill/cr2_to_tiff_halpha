@@ -12,7 +12,6 @@ doctest = false
 name = "cr2totiff"
 path = "bin/cr2totiff.rs"
 
-
 [[bin]]
 name = "mkmean"
 path = "bin/mkmean.rs"
@@ -20,6 +19,10 @@ path = "bin/mkmean.rs"
 [[bin]]
 name = "proc_ha"
 path = "bin/proc_ha.rs"
+
+[[bin]]
+name = "colorize"
+path = "bin/colorize.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

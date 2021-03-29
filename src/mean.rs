@@ -45,5 +45,5 @@ pub fn process_mean(file_list:Vec<&str>) -> Result<ImageBuffer, &'static str> {
 
 pub fn run_mean_stack(file_list:Vec<&str>, output:&str) {
     let mean_stack = process_mean(file_list).unwrap();
-    mean_stack.save(output).expect(constants::OK);
+    mean_stack.save(output).expect(constants::status::OK);
 }
